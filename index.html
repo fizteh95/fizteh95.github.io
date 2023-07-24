@@ -59,8 +59,7 @@
 
    Telegram.WebApp.onEvent('mainButtonClicked', function(){
       //tg.showAlert(`Есть нажатие!`);
-      let temp = tg.sendData(`some string that we need to send`); 
-      tg.showAlert(temp);
+      tg.sendData(`some string that we need to send`); 
       //при клике на основную кнопку отправляем данные в строковом виде
       tg.showAlert(`Отправлено!`);
    });
