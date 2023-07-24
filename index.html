@@ -78,6 +78,10 @@
    let userid = document.createElement('p'); //создаем еще параграф 
    userid.innerText = `${tg.initDataUnsafe.user.id}`; //показываем user_id
    usercard.appendChild(userid); //добавляем
+   
+   let user_raw = document.createElement('p'); //создаем еще параграф 
+   user_raw.innerText = `${tg.initData}`; //показываем 
+   usercard.appendChild(user_raw); //добавляем
 
 
    //работает только в attachment menu
