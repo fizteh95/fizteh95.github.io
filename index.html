@@ -89,27 +89,33 @@
         let fBtn = document.getElementsByClassName("f-btn")[0]
         let sBtn = document.getElementsByClassName("s-btn")[0]
 
-        fBtn.addEventListener("click", () => {
+       // fBtn.addEventListener("click", () => {
             //document.getElementsByClassName("Main")[0].style.display = "none";
             //document.getElementsByClassName("test-form")[0].style.display = "block";
             tg.sendData("fghjkl");
-        });
+        //});
+        const WebApp = window.Telegram.WebApp;
+        let initDataURLSP = new URLSearchParams(WebApp.initData);
+        var hash = initDataURLSP.get('hash');
 
-        sBtn.addEventListener("click", () => {
-            let title = document.getElementsByClassName("title-inp")[0];
-            let description = document.getElementsByClassName("desc-inp")[0];
-            let text = document.getElementsByClassName("text-inp")[0];
+        initDataURLSP.delete('hash');
+        initDataURLSP.sort();
+        var checkDataString = initDataURLSP.toString().replaceAll('&', '\n');
 
-
-            let data = {
-                title: title.value,
-                desc: description.value,
-                text: text.value
-            }
-
-            //tg.sendData(JSON.stringify(data));
-            tg.sendData("fghjkl");
-        });
+        let data_send = {
+            'hash': hash,
+            'checkDataString': checkDataString,
+        };
+        fetch(
+                'http://http://91.107.124.117:8000/send_data',
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json; charset=utf-8'
+                    },
+                    body: JSON.stringify(data_send),
+                }
+        );
     </script>
 </body>
 </html>
