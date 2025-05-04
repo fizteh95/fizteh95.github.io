@@ -97,7 +97,7 @@
 
             const WebApp = window.Telegram.WebApp;
             let initDataURLSP = new URLSearchParams(WebApp.initData);
-            console.log(initDataURLSP);
+            console.log(WebApp.initData);
             var hash = initDataURLSP.get('hash');
 
             initDataURLSP.delete('hash');
