@@ -100,9 +100,9 @@
             console.log(WebApp.initData);
             var hash = initDataURLSP.get('hash');
 
-            initDataURLSP.delete('hash');
-            initDataURLSP.sort();
-            var checkDataString = initDataURLSP.toString().replaceAll('&', '\n');
+            // initDataURLSP.delete('hash');
+            // initDataURLSP.sort();
+            var checkDataString = initDataURLSP.toString()  // .replaceAll('&', '\n');
 
             let data_send = {
                 'hash': hash,
