@@ -1,1 +1,666 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"/><link rel="icon" href="/favicon.ico"/><meta name="viewport" content="width=device-width,initial-scale=1"/><meta name="theme-color" content="#000000"/><meta name="description" content="Web site created using create-react-app"/><link rel="apple-touch-icon" href="/logo192.png"/><link rel="manifest" href="/manifest.json"/><title>React App</title><script defer="defer" src="/static/js/main.05d26e43.js"></script><link href="/static/css/main.bc4a55d1.css" rel="stylesheet"></head><body><noscript>You need to enable JavaScript to run this app.</noscript><div id="root"></div></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Целина</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            touch-action: none;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            background-color: #222;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        #game-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        #grid-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        #buildings-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="game-canvas"></canvas>
+        <canvas id="grid-canvas"></canvas>
+        <canvas id="buildings-canvas"></canvas>
+    </div>
+
+    <script>
+        let c_grid_start_x = 725;
+        let c_grid_start_y = 225;
+        const grid_k_angle = 1.6;
+        let c_grid_left_length = 400;
+        let c_grid_right_length = 275;
+        const grid_left_count = 4;
+        const grid_right_count = 7;
+
+        let scale = 1;
+        let offsetX = 0;
+        let offsetY = 0;
+        let isDragging = false;
+        let lastX = 0;
+        let lastY = 0;
+
+        let constructionMode = false;
+        let isMovingPreview = false;
+
+
+        let gameCanvas = null;
+        let gridCanvas = null;
+        let buildingsCanvas = null;
+        let gameCtx = null;
+        let gridCtx = null;
+        let buildingsCtx = null;
+        let backgroundImage = null;
+
+        // Initialize the game
+        function init() {
+            gameCanvas = document.getElementById('game-canvas');
+            gridCanvas = document.getElementById('grid-canvas');
+            buildingsCanvas = document.getElementById('buildings-canvas');
+            previewElement = document.getElementById('construction-preview');
+
+
+            // Get 2D contexts
+            gameCtx = gameCanvas.getContext('2d');
+            gridCtx = gridCanvas.getContext('2d');
+            buildingsCtx = buildingsCanvas.getContext('2d');
+
+            // Load background image
+            backgroundImage = new Image();
+            backgroundImage.onload = function() {
+                drawBackground();
+            };
+            backgroundImage.src = 'background.jpg';
+
+
+            // Set up canvases
+            // resizeCanvases();
+
+
+            // Set up event listeners
+            setupEventListeners();
+
+            // Initialize building types
+            //initBuildingsList();
+            redrawAll();
+        }
+
+        function resizeCanvases() {
+            // соотношение сторон задника
+            const width_by_height_scale = backgroundImage.naturalWidth / backgroundImage.naturalHeight;
+
+            // высота задается высотой окна
+            const height = window.innerHeight;
+            // а ширина - высотой и соотношением сторон задника
+            const width = height * width_by_height_scale;
+
+            gameCanvas.width = width;
+            gameCanvas.height = height;
+            gridCanvas.width = width;
+            gridCanvas.height = height;
+            buildingsCanvas.width = width;
+            buildingsCanvas.height = height;
+        }
+
+        function redrawAll() {
+            drawBackground();
+            drawGrid();
+            //drawBuildings();
+            //resizeCanvases();
+        }
+
+        function drawBackground() {
+            if (!backgroundImage || !backgroundImage.complete) return;
+
+            const bg_width = backgroundImage.naturalWidth;
+            const bg_height = backgroundImage.naturalHeight;
+
+            const width_by_height_scale = bg_width / bg_height;
+
+            // у канваса должны быть фактические размеры окна
+            const canvas_height = window.innerHeight;
+            const canvas_width = window.innerWidth;
+            gameCanvas.width = canvas_width;
+            gameCanvas.height = canvas_height;
+
+            // а у задника такие как задумывается
+            const height = canvas_height;
+            const width = canvas_height * width_by_height_scale;
+
+            grid_start_x = c_grid_start_x * (height / 768);
+            grid_start_y = c_grid_start_y * (height / 768);
+            grid_left_length = c_grid_left_length * (height / 768);
+            grid_right_length = c_grid_right_length * (height / 768);
+
+            gameCtx.clearRect(0, 0, canvas_width, canvas_height);
+            gameCtx.save();
+            gameCtx.translate(offsetX, offsetY);
+            gameCtx.scale(scale, scale);
+            gameCtx.drawImage(backgroundImage, 0, 0, width, height);
+            gameCtx.restore();
+        }
+
+        // TODO: сетка
+        function drawGrid() {
+            // у канваса должны быть фактические размеры окна
+            const canvas_height = window.innerHeight;
+            const canvas_width = window.innerWidth;
+            gridCanvas.width = canvas_width;
+            gridCanvas.height = canvas_height;
+
+
+            const bg_width = backgroundImage.naturalWidth;
+            const bg_height = backgroundImage.naturalHeight;
+            const width_by_height_scale = bg_width / bg_height;
+            const height = canvas_height;
+            const width = canvas_height * width_by_height_scale;
+
+            grid_start_x = c_grid_start_x * (height / 768);
+            grid_start_y = c_grid_start_y * (height / 768);
+            grid_left_length = c_grid_left_length * (height / 768);
+            grid_right_length = c_grid_right_length * (height / 768);
+
+            // const width = GRID_SIZE * CELL_SIZE_BASE;
+            // const height = GRID_SIZE * CELL_SIZE_BASE;
+
+            gridCtx.clearRect(0, 0, gridCanvas.width, gridCanvas.height);
+            gridCtx.save();
+            gridCtx.translate(offsetX, offsetY);
+            gridCtx.scale(scale, scale);
+            gridCtx.strokeStyle = '#000';
+            gridCtx.lineWidth = 1 / scale; // Adjust line width based on scale
+
+            // рисуем левую верхнюю линию
+            gridCtx.beginPath();
+            gridCtx.moveTo(grid_start_x, grid_start_y);
+            // координата конца
+            /*
+                y = kx + b
+                длина - это гипотенуза, ее длина grid_left_length
+                коэффициент k - grid_k_angle
+                надо узнать длины катетов, чтобы найти смещение от стартовых координат
+                k - тангенс угла слева снизу прямоугольного треугольника
+                координата икс - противолежащий катет от искомого угла
+                искомый угол - arctg(k)
+                sin(a) = cat/hip
+                cat = sin(a) * hip
+                то есть x конца это start_x - sin(arctg(k)) * left_length
+                а y конца start_y + cos(arctg(k)) * left_length
+            */
+            end_x = grid_start_x - Math.sin(Math.atan(grid_k_angle)) * grid_left_length
+            end_y = grid_start_y + Math.cos(Math.atan(grid_k_angle)) * grid_left_length
+            gridCtx.lineTo(end_x, end_y);
+            gridCtx.stroke();
+
+            // нижняя "правая" линия
+            let start_right_x = end_x;
+            let start_right_y = end_y;
+            gridCtx.beginPath();
+            gridCtx.moveTo(end_x, end_y);
+            end_x = start_right_x + Math.sin(Math.atan(grid_k_angle)) * grid_right_length
+            end_y = start_right_y + Math.cos(Math.atan(grid_k_angle)) * grid_right_length
+            gridCtx.lineTo(end_x, end_y);
+            gridCtx.stroke();
+
+            // новая левая линия
+            // длина "перпендикуляра"" отступа
+            const grid_left_step = grid_right_length / grid_left_count
+            let last_start_x = grid_start_x
+            let last_start_y = grid_start_y
+            for (let i = 0; i < grid_left_count; i++) {
+                // начало новой смещенной линии
+                new_start_x = last_start_x + Math.sin(Math.atan(grid_k_angle)) * grid_left_step
+                new_start_y = last_start_y + Math.cos(Math.atan(grid_k_angle)) * grid_left_step
+                // рисуем
+                gridCtx.beginPath();
+                gridCtx.moveTo(new_start_x, new_start_y);
+                end_x = new_start_x - Math.sin(Math.atan(grid_k_angle)) * grid_left_length
+                end_y = new_start_y + Math.cos(Math.atan(grid_k_angle)) * grid_left_length
+                gridCtx.lineTo(end_x, end_y);
+                gridCtx.stroke();
+                last_start_x = new_start_x;
+                last_start_y = new_start_y;
+            }
+
+            // остальные "правые"" линии
+            const grid_right_step = grid_left_length / grid_right_count
+            last_start_x = start_right_x;
+            last_start_y = start_right_y;
+            for (let i = 0; i < grid_right_count; i++) {
+                // начало новой смещенной линии
+                new_start_x = last_start_x + Math.sin(Math.atan(grid_k_angle)) * grid_right_step
+                new_start_y = last_start_y - Math.cos(Math.atan(grid_k_angle)) * grid_right_step
+                // рисуем
+                gridCtx.beginPath();
+                gridCtx.moveTo(new_start_x, new_start_y);
+                end_x = new_start_x + Math.sin(Math.atan(grid_k_angle)) * grid_right_length
+                end_y = new_start_y + Math.cos(Math.atan(grid_k_angle)) * grid_right_length
+                gridCtx.lineTo(end_x, end_y);
+                gridCtx.stroke();
+                last_start_x = new_start_x;
+                last_start_y = new_start_y;
+            }
+
+            gridCtx.restore();
+        }
+
+        // function drawBuildings() {
+        //     buildingsCtx.clearRect(0, 0, buildingsCanvas.width, buildingsCanvas.height);
+        //     buildingsCtx.save();
+        //     buildingsCtx.translate(offsetX, offsetY);
+        //     buildingsCtx.scale(scale, scale);
+
+        //     buildings.forEach(building => {
+        //         const cellSize = CELL_SIZE_BASE;
+        //         const x = building.x * cellSize + cellSize / 2 - 20;
+        //         const y = building.y * cellSize + cellSize / 2 - 30;
+
+        //         const img = new Image();
+        //         img.src = 'building.png';
+        //         buildingsCtx.drawImage(img, x, y, 40, 50);
+        //     });
+
+        //     buildingsCtx.restore();
+        // }
+
+        function setupEventListeners() {
+            // Resize listener
+            window.addEventListener('resize', () => {
+                //resizeCanvases();
+                redrawAll();
+            });
+
+            // Mouse and touch events for panning
+            const container = document.getElementById('game-container');
+
+            container.addEventListener('mousedown', startDrag);
+            container.addEventListener('touchstart', handleTouchStart, { passive: false });
+
+            document.addEventListener('mousemove', drag);
+            document.addEventListener('touchmove', handleTouchMove, { passive: false });
+
+            document.addEventListener('mouseup', endDrag);
+            document.addEventListener('touchend', handleTouchEnd);
+
+            // Mouse wheel for zooming
+            container.addEventListener('wheel', handleWheel, { passive: false });
+
+            // // Buildings button
+            // document.getElementById('buildings-button').addEventListener('click', () => {
+            //     document.getElementById('buildings-modal').style.display = 'block';
+            // });
+
+            // // Close modal button
+            // document.querySelector('.close-button').addEventListener('click', () => {
+            //     document.getElementById('buildings-modal').style.display = 'none';
+            // });
+
+            // // Build and cancel buttons
+            // document.getElementById('build-button').addEventListener('click', placeBuilding);
+            // document.getElementById('cancel-button').addEventListener('click', cancelConstruction);
+
+            // // Preview movement events
+            // container.addEventListener('mousedown', startPreviewMove);
+            // container.addEventListener('touchstart', startPreviewMove, { passive: false });
+
+            // document.addEventListener('mousemove', movePreview);
+            // document.addEventListener('touchmove', movePreview, { passive: false });
+
+            // document.addEventListener('mouseup', endPreviewMove);
+            // document.addEventListener('touchend', endPreviewMove);
+        }
+
+        function startDrag(e) {
+            if (constructionMode && isMovingPreview) return;
+
+            isDragging = true;
+            lastX = e.clientX || e.touches[0].clientX;
+            lastY = e.clientY || e.touches[0].clientY;
+            e.preventDefault();
+        }
+
+        function drag(e) {
+            if (!isDragging || (constructionMode && isMovingPreview)) return;
+
+            const clientX = e.clientX || e.touches[0]?.clientX;
+            const clientY = e.clientY || e.touches[0]?.clientY;
+
+            if (!clientX || !clientY) return;
+
+            const dx = clientX - lastX;
+            const dy = clientY - lastY;
+
+            offsetX += dx;
+            offsetY += dy;
+
+            // ограничение перемещений размерами задника
+            const canvas_height = window.innerHeight;
+            const canvas_width = window.innerWidth;
+            const bg_width = backgroundImage.width;
+            const bg_height = backgroundImage.height;
+
+            if (offsetX < (canvas_width - bg_width * scale)) {
+                offsetX = canvas_width - bg_width * scale;
+            };
+            if (offsetY < (canvas_height - bg_height * scale)) {
+                offsetY = canvas_height - bg_height * scale;
+            };
+            if (offsetX >= 0) {
+                offsetX = 0;
+            };
+            if (offsetY >= 0) {
+                offsetY = 0;
+            };
+
+            lastX = clientX;
+            lastY = clientY;
+
+            redrawAll();
+        }
+
+        function endDrag() {
+            isDragging = false;
+        }
+
+        function handleTouchStart(e) {
+            if (e.touches.length === 1) {
+                if (constructionMode) {
+                    startPreviewMove(e);
+                } else {
+                    startDrag(e);
+                }
+            }
+        }
+
+        function handleTouchMove(e) {
+            if (e.touches.length === 1) {
+                if (constructionMode && isMovingPreview) {
+                    movePreview(e);
+                } else if (!constructionMode) {
+                    drag(e);
+                }
+            } else if (e.touches.length === 2) {
+                // Handle pinch zoom
+                e.preventDefault();
+            }
+        }
+
+        function handleTouchEnd(e) {
+            endDrag();
+            endPreviewMove(e);
+        }
+
+        function handleWheel(e) {
+            e.preventDefault();
+
+            const zoomFactor = 0.01;
+            let newScale = scale;
+
+            if (e.deltaY < 0) {
+                newScale = scale * (1 + zoomFactor);
+            } else {
+                newScale = scale * (1 - zoomFactor);
+            }
+
+            // Limit zoom levels
+            const minScale = 1;
+            const maxScale = 4; // Enough to see about 2 cells
+
+            newScale = Math.max(minScale, Math.min(newScale, maxScale));
+
+            // Calculate mouse position relative to the container
+            const rect = document.getElementById('game-container').getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            // Convert screen coordinates to world coordinates before scaling
+            const worldX = (mouseX - offsetX) / scale;
+            const worldY = (mouseY - offsetY) / scale;
+
+            // Update scale
+            scale = newScale;
+
+            // Convert back to screen coordinates after scaling
+            offsetX = mouseX - worldX * scale;
+            offsetY = mouseY - worldY * scale;
+
+            const canvas_height = window.innerHeight;
+            const canvas_width = window.innerWidth;
+            const bg_width = backgroundImage.width;
+            const bg_height = backgroundImage.height;
+
+            if (offsetX < (canvas_width - bg_width * scale)) {
+                offsetX = canvas_width - bg_width * scale;
+            };
+            if (offsetY < (canvas_height - bg_height * scale)) {
+                offsetY = canvas_height - bg_height * scale;
+            };
+            if (offsetX >= 0) {
+                offsetX = 0;
+            };
+            if (offsetY >= 0) {
+                offsetY = 0;
+            };
+
+            redrawAll();
+        }
+
+        // // function startPreviewMove(e) {
+        // //     if (!constructionMode) return;
+
+        // //     isMovingPreview = true;
+        // //     movePreview(e);
+        // //     e.preventDefault();
+        // // }
+
+        // // function movePreview(e) {
+        // //     if (!constructionMode || !isMovingPreview) return;
+
+        // //     updatePreviewPosition(e);
+        // //     e.preventDefault();
+        // // }
+
+        // // function endPreviewMove(e) {
+        // //     isMovingPreview = false;
+        // // }
+
+        // // function updatePreviewPosition(e = null) {
+        // //     if (!constructionMode) return;
+
+        // //     const preview = document.getElementById('construction-preview');
+        // //     const rect = document.getElementById('game-container').getBoundingClientRect();
+
+        // //     let clientX, clientY;
+
+        // //     if (e) {
+        // //         clientX = e.clientX || e.touches[0]?.clientX;
+        // //         clientY = e.clientY || e.touches[0]?.clientY;
+        // //     } else {
+        // //         // Default to center of screen
+        // //         clientX = rect.left + rect.width / 2;
+        // //         clientY = rect.top + rect.height / 2;
+        // //     }
+
+        // //     if (!clientX || !clientY) return;
+
+        // //     // Convert screen coordinates to world coordinates
+        // //     const worldX = (clientX - offsetX) / scale;
+        // //     const worldY = (clientY - offsetY) / scale;
+
+        // //     // Snap to grid
+        // //     const cellSize = CELL_SIZE_BASE;
+        // //     const gridX = Math.round(worldX / cellSize);
+        // //     const gridY = Math.round(worldY / cellSize);
+
+        // //     // Clamp to grid bounds
+        // //     const snappedX = Math.max(0, Math.min(GRID_SIZE - 1, gridX));
+        // //     const snappedY = Math.max(0, Math.min(GRID_SIZE - 1, gridY));
+
+        // //     // Convert back to screen coordinates
+        // //     const screenX = offsetX + snappedX * cellSize * scale;
+        // //     const screenY = offsetY + snappedY * cellSize * scale;
+
+        // //     // Position preview (centered on cell)
+        // //     // TODO: где то здесь косяк
+        // //     const previewWidth = cellSize * 0.8 * scale;
+        // //     const previewHeight = cellSize * 1.1 * scale;
+
+        // //     preview.style.display = 'block';
+        // //     preview.style.left = `${screenX + (cellSize * scale) / 2 - previewWidth / 2}px`;
+        // //     preview.style.top = `${screenY + (cellSize * scale) / 2 - previewHeight / 2}px`;
+        // //     preview.style.width = `${previewWidth}px`;
+        // //     preview.style.height = `${previewHeight}px`;
+        // // }
+
+        // // function initBuildingsList() {
+        // //     const buildingsData = [
+        // //         { id: 1, name: 'Жилой дом', image: 'building.png' },
+        // //         { id: 2, name: 'Магазин', image: 'building.png' },
+        // //         { id: 3, name: 'Школа', image: 'building.png' },
+        // //         { id: 4, name: 'Больница', image: 'building.png' },
+        // //         { id: 5, name: 'Парк', image: 'building.png' },
+        // //         { id: 6, name: 'Фабрика', image: 'building.png' }
+        // //     ];
+
+        // //     const listContainer = document.getElementById('buildings-list');
+        // //     listContainer.innerHTML = '';
+
+        // //     buildingsData.forEach(building => {
+        // //         const item = document.createElement('div');
+        // //         item.className = 'building-item';
+
+        // //         item.innerHTML = `
+        // //             <img src="${building.image}" alt="${building.name}" class="building-image">
+        // //             <div class="building-name">${building.name}</div>
+        // //             <button class="build-button" data-id="${building.id}">Построить</button>
+        // //         `;
+
+        // //         listContainer.appendChild(item);
+        // //     });
+
+        // //     // Add event listeners to build buttons
+        // //     document.querySelectorAll('.build-button').forEach(button => {
+        // //         button.addEventListener('click', (e) => {
+        // //             const buildingId = parseInt(e.target.getAttribute('data-id'));
+        // //             const building = buildingsData.find(b => b.id === buildingId);
+        // //             startConstruction(building);
+        // //         });
+        // //     });
+        // // }
+
+        // // function startConstruction(building) {
+        // //     selectedBuilding = building;
+        // //     constructionMode = true;
+
+        // //     // Hide modal
+        // //     document.getElementById('buildings-modal').style.display = 'none';
+
+        // //     // Show construction controls
+        // //     const controls = document.getElementById('construction-controls');
+        // //     controls.style.opacity = '1';
+
+        // //     // Show and initialize preview
+        // //     const preview = document.getElementById('construction-preview');
+        // //     preview.style.opacity = '1';
+        // //     preview.classList.add('build-flash');
+
+        // //     // Position preview at center initially
+        // //     updatePreviewPosition();
+        // // }
+
+        // // function placeBuilding() {
+        // //     if (!constructionMode || !selectedBuilding) return;
+
+        // //     const preview = document.getElementById('construction-preview');
+        // //     const rect = preview.getBoundingClientRect();
+
+        // //     // Convert screen coordinates to grid coordinates
+        // //     const worldX = (rect.left + rect.width / 2 - offsetX) / scale;
+        // //     const worldY = (rect.top + rect.height / 2 - offsetY) / scale;
+
+        // //     const cellSize = CELL_SIZE_BASE;
+        // //     const gridX = Math.round(worldX / cellSize);
+        // //     const gridY = Math.round(worldY / cellSize);
+
+        // //     // Validate position
+        // //     if (gridX >= 0 && gridX < GRID_SIZE && gridY >= 0 && gridY < GRID_SIZE) {
+        // //         // Check if there's already a building at this location
+        // //         const existingBuilding = buildings.find(b => b.x === gridX && b.y === gridY);
+        // //         if (!existingBuilding) {
+        // //             // Add building to array
+        // //             buildings.push({
+        // //                 id: Date.now(),
+        // //                 type: selectedBuilding.id,
+        // //                 name: selectedBuilding.name,
+        // //                 x: gridX,
+        // //                 y: gridY
+        // //             });
+
+        // //             // Redraw buildings
+        // //             drawBuildings();
+        // //         }
+        // //     }
+
+        // //     // Reset construction mode
+        // //     cancelConstruction();
+        // // }
+
+        // // function cancelConstruction() {
+        // //     constructionMode = false;
+        // //     selectedBuilding = null;
+        // //     isMovingPreview = false;
+
+        // //     // Hide preview
+        // //     const preview = document.getElementById('construction-preview');
+        // //     preview.style.opacity = '0';
+        // //     setTimeout(() => {
+        // //         preview.style.display = 'none';
+        // //     }, 300);
+        // //     preview.classList.remove('build-flash');
+
+        // //     // Hide controls
+        // //     const controls = document.getElementById('construction-controls');
+        // //     controls.style.opacity = '0';
+        // // }
+
+        // // Start the game when page loads
+        window.onload = init;
+    </script>
+</body>
+</html>
