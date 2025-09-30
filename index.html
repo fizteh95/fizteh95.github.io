@@ -381,18 +381,23 @@
             const bg_width = backgroundImage.width;
             const bg_height = backgroundImage.height;
 
-            if (offsetX <= Math.max(canvas_width - canvas_width * scale, canvas_width - bg_width * scale)) {
-                offsetX = Math.max(canvas_width - canvas_width * scale, canvas_width - bg_width * scale);
-            };
-            if (offsetY <= canvas_height - canvas_height * scale) {
-                offsetY = canvas_height - canvas_height * scale;
-            };
-            if (offsetX >= 0) {
-                offsetX = 0;
-            };
-            if (offsetY >= 0) {
-                offsetY = 0;
-            };
+            // if (offsetX <= Math.max(canvas_width - canvas_width * scale, canvas_width - bg_width * scale)) {
+            //     offsetX = Math.max(canvas_width - canvas_width * scale, canvas_width - bg_width * scale);
+            // };
+            // if (offsetY <= canvas_height - canvas_height * scale) {
+            //     offsetY = canvas_height - canvas_height * scale;
+            // };
+            // if (offsetX >= 0) {
+            //     offsetX = 0;
+            // };
+            // if (offsetY >= 0) {
+            //     offsetY = 0;
+            // };
+            const maxOffsetX = Math.min(0, canvas_width - bg_width * scale);
+            const maxOffsetY = Math.min(0, canvas_height - bg_height * scale);
+
+            offsetX = Math.max(maxOffsetX, Math.min(0, offsetX));
+            offsetY = Math.max(maxOffsetY, Math.min(0, offsetY));
 
             lastX = clientX;
             lastY = clientY;
@@ -482,18 +487,11 @@
                     const bg_width = backgroundImage.width;
                     const bg_height = backgroundImage.height;
 
-                    if (offsetX <= Math.max(canvas_width - canvas_width * scale, canvas_width - bg_width * scale)) {
-                        offsetX = Math.max(canvas_width - canvas_width * scale, canvas_width - bg_width * scale);
-                    };
-                    if (offsetY <= canvas_height - canvas_height * scale) {
-                        offsetY = canvas_height - canvas_height * scale;
-                    };
-                    if (offsetX >= 0) {
-                        offsetX = 0;
-                    };
-                    if (offsetY >= 0) {
-                        offsetY = 0;
-                    };
+                    const maxOffsetX = Math.min(0, canvas_width - bg_width * scale);
+                    const maxOffsetY = Math.min(0, canvas_height - bg_height * scale);
+
+                    offsetX = Math.max(maxOffsetX, Math.min(0, offsetX));
+                    offsetY = Math.max(maxOffsetY, Math.min(0, offsetY));
 
                     redrawAll();
 
