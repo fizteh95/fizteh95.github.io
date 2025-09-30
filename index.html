@@ -381,7 +381,6 @@
             const bg_width = backgroundImage.width;
             const bg_height = backgroundImage.height;
 
-            // TODO: здесь косяк
             if (offsetX <= Math.max(canvas_width - canvas_width * scale, canvas_width - bg_width * scale)) {
                 offsetX = Math.max(canvas_width - canvas_width * scale, canvas_width - bg_width * scale);
             };
@@ -443,16 +442,8 @@
                 // Сравниваем расстояния для масштабирования
                 // Пороговое значение (0.01) для предотвращения ложных срабатываний
                 if (Math.abs(initialDistance - currentDistance) >= 0.1) {
-                    // if (currentDistance < initialDistance) {
-                    //     console.log('Щипок внутрь');
-                    //     // Логика для уменьшения масштаба (например, уменьшить размер элемента)
-                    // } else if (currentDistance > initialDistance) {
-                    //     console.log('Щипок наружу');
-                    //     // Логика для увеличения масштаба (например, увеличить размер элемента)
-                    // }
 
-
-                    const zoomFactor = 0.1;
+                    const zoomFactor = 0.5;
                     let newScale = scale;
                     const deltaY = initialDistance - currentDistance;
 
@@ -491,11 +482,11 @@
                     const bg_width = backgroundImage.width;
                     const bg_height = backgroundImage.height;
 
-                    if (offsetX < (canvas_width - bg_width * scale)) {
-                        offsetX = canvas_width - bg_width * scale;
+                    if (offsetX <= Math.max(canvas_width - canvas_width * scale, canvas_width - bg_width * scale)) {
+                        offsetX = Math.max(canvas_width - canvas_width * scale, canvas_width - bg_width * scale);
                     };
-                    if (offsetY < (canvas_height - bg_height * scale)) {
-                        offsetY = canvas_height - bg_height * scale;
+                    if (offsetY <= canvas_height - canvas_height * scale) {
+                        offsetY = canvas_height - canvas_height * scale;
                     };
                     if (offsetX >= 0) {
                         offsetX = 0;
