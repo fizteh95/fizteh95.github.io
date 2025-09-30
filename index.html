@@ -76,6 +76,12 @@
         let lastX = 0;
         let lastY = 0;
 
+        // для мобилок
+        let touchstartX = 0;
+        let touchstartY = 0;
+        let touchmoveX = 0;
+        let touchmoveY = 0;
+
         let constructionMode = false;
         let isMovingPreview = false;
 
@@ -121,22 +127,22 @@
             redrawAll();
         }
 
-        function resizeCanvases() {
-            // соотношение сторон задника
-            const width_by_height_scale = backgroundImage.naturalWidth / backgroundImage.naturalHeight;
+        // function resizeCanvases() {
+        //     // соотношение сторон задника
+        //     const width_by_height_scale = backgroundImage.naturalWidth / backgroundImage.naturalHeight;
 
-            // высота задается высотой окна
-            const height = window.innerHeight;
-            // а ширина - высотой и соотношением сторон задника
-            const width = height * width_by_height_scale;
+        //     // высота задается высотой окна
+        //     const height = window.innerHeight;
+        //     // а ширина - высотой и соотношением сторон задника
+        //     const width = height * width_by_height_scale;
 
-            gameCanvas.width = width;
-            gameCanvas.height = height;
-            gridCanvas.width = width;
-            gridCanvas.height = height;
-            buildingsCanvas.width = width;
-            buildingsCanvas.height = height;
-        }
+        //     gameCanvas.width = width;
+        //     gameCanvas.height = height;
+        //     gridCanvas.width = width;
+        //     gridCanvas.height = height;
+        //     buildingsCanvas.width = width;
+        //     buildingsCanvas.height = height;
+        // }
 
         function redrawAll() {
             drawBackground();
@@ -375,11 +381,12 @@
             const bg_width = backgroundImage.width;
             const bg_height = backgroundImage.height;
 
-            if (offsetX < (canvas_width - bg_width * scale)) {
-                offsetX = canvas_width - bg_width * scale;
+            // TODO: здесь косяк
+            if (offsetX <= Math.max(canvas_width - canvas_width * scale, canvas_width - bg_width * scale)) {
+                offsetX = Math.max(canvas_width - canvas_width * scale, canvas_width - bg_width * scale);
             };
-            if (offsetY < (canvas_height - bg_height * scale)) {
-                offsetY = canvas_height - bg_height * scale;
+            if (offsetY <= canvas_height - canvas_height * scale) {
+                offsetY = canvas_height - canvas_height * scale;
             };
             if (offsetX >= 0) {
                 offsetX = 0;
@@ -406,6 +413,12 @@
                     startDrag(e);
                 }
             }
+            if (e.touches.length === 2) {
+                touchstartX = touches[0].clientX;
+                touchstartY = touches[0].clientY;
+                touchmoveX = touches[1].clientX;
+                touchmoveY = touches[1].clientY;
+            }
         }
 
         function handleTouchMove(e) {
@@ -418,12 +431,99 @@
             } else if (e.touches.length === 2) {
                 // Handle pinch zoom
                 e.preventDefault();
+                let currentX = e.touches[0].clientX;
+                let currentY = e.touches[0].clientY;
+                let currentX2 = e.touches[1].clientX;
+                let currentY2 = e.touches[1].clientY;
+
+                // Вычисляем начальное и текущее расстояние
+                let initialDistance = Math.sqrt(Math.pow(touchmoveX - touchstartX, 2) + Math.pow(touchmoveY - touchstartY, 2));
+                let currentDistance = Math.sqrt(Math.pow(currentX2 - currentX, 2) + Math.pow(currentY2 - currentY, 2));
+
+                // Сравниваем расстояния для масштабирования
+                // Пороговое значение (0.01) для предотвращения ложных срабатываний
+                if (Math.abs(initialDistance - currentDistance) >= 0.1) {
+                    // if (currentDistance < initialDistance) {
+                    //     console.log('Щипок внутрь');
+                    //     // Логика для уменьшения масштаба (например, уменьшить размер элемента)
+                    // } else if (currentDistance > initialDistance) {
+                    //     console.log('Щипок наружу');
+                    //     // Логика для увеличения масштаба (например, увеличить размер элемента)
+                    // }
+
+
+                    const zoomFactor = 0.01;
+                    let newScale = scale;
+                    const deltaY = currentDistance - initialDistance;
+
+                    if (deltaY < 0) {
+                        newScale = scale * (1 + zoomFactor);
+                    } else {
+                        newScale = scale * (1 - zoomFactor);
+                    }
+
+                    // Limit zoom levels
+                    const minScale = 1;
+                    const maxScale = 4; // Enough to see about 2 cells
+
+                    newScale = Math.max(minScale, Math.min(newScale, maxScale));
+
+                    // Calculate mouse position relative to the container
+                    const rect = document.getElementById('game-container').getBoundingClientRect();
+                    const clientX = currentX2 - currentX;
+                    const clientY = currentY2 - currentY;
+                    const mouseX = clientX - rect.left;
+                    const mouseY = clientY - rect.top;
+
+                    // Convert screen coordinates to world coordinates before scaling
+                    const worldX = (mouseX - offsetX) / scale;
+                    const worldY = (mouseY - offsetY) / scale;
+
+                    // Update scale
+                    scale = newScale;
+
+                    // Convert back to screen coordinates after scaling
+                    offsetX = mouseX - worldX * scale;
+                    offsetY = mouseY - worldY * scale;
+
+                    const canvas_height = window.innerHeight;
+                    const canvas_width = window.innerWidth;
+                    const bg_width = backgroundImage.width;
+                    const bg_height = backgroundImage.height;
+
+                    if (offsetX < (canvas_width - bg_width * scale)) {
+                        offsetX = canvas_width - bg_width * scale;
+                    };
+                    if (offsetY < (canvas_height - bg_height * scale)) {
+                        offsetY = canvas_height - bg_height * scale;
+                    };
+                    if (offsetX >= 0) {
+                        offsetX = 0;
+                    };
+                    if (offsetY >= 0) {
+                        offsetY = 0;
+                    };
+
+                    redrawAll();
+
+
+
+                }
+                // Обновляем стартовые позиции для следующего шага
+                touchstartX = currentX;
+                startY = currentY;
+                touchmoveX = currentX2;
+                touchmoveY = currentY2;
             }
         }
 
         function handleTouchEnd(e) {
             endDrag();
             endPreviewMove(e);
+            touchstartX = 0;
+            touchstartY = 0;
+            touchmoveX = 0;
+            touchmoveY = 0;
         }
 
         function handleWheel(e) {
