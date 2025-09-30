@@ -452,9 +452,9 @@
                     // }
 
 
-                    const zoomFactor = 0.01;
+                    const zoomFactor = 0.1;
                     let newScale = scale;
-                    const deltaY = currentDistance - initialDistance;
+                    const deltaY = initialDistance - currentDistance;
 
                     if (deltaY < 0) {
                         newScale = scale * (1 + zoomFactor);
