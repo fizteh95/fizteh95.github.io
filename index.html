@@ -446,9 +446,9 @@
 
                 // Сравниваем расстояния для масштабирования
                 // Пороговое значение (0.01) для предотвращения ложных срабатываний
-                if (Math.abs(initialDistance - currentDistance) >= 0.05) {
+                if (Math.abs(initialDistance - currentDistance) >= 0) {
 
-                    const zoomFactor = 0.05;
+                    const zoomFactor = 0.01;
                     let newScale = scale;
                     const deltaY = initialDistance - currentDistance;
 
