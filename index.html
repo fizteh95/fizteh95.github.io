@@ -66,6 +66,19 @@
             align-items: center;
             font-size: 24px;
         }
+
+        #modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            z-index: 2000;
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -91,15 +104,46 @@
         const cubeImage = new Image();
         cubeImage.src = 'cube.png';
 
+        const ambarImage = new Image();
+        ambarImage.src = 'ambar.png';
+
         function drawCube(x, y) {
+            drawCubeObject(cubeImage, x, y, 1, 1)
+        }
+
+        function drawAmbar(x, y) {
+            drawCubeObject(ambarImage, x, y, 3, 2)
+        }
+
+        function drawCubeObject(image, x, y, imageWidth, imageHeight) {
+            if (!image.complete || image.naturalWidth === 0) {
+                console.error('Image is not loaded or is broken:', image.src);
+                return;
+            }
             const gridSize = 50 * scale;
             const halfGridSize = gridSize / 2;
-            const cubeX = ((x - y) / 2) * gridSize + offsetX + width / 2 - gridSize / 2;
-            const cubeY = ((x + y) / 2) * gridSize / 2 + offsetY + height / 4 - gridSize / 2;
-            ctx.drawImage(cubeImage, cubeX, cubeY, gridSize, gridSize);
+            let objectWidth, objectX, objectHeight;
+            if (imageWidth > 1) {
+                objectWidth = (imageWidth - 0.5) * gridSize;
+                objectX = ((x - y) / 2) * gridSize + offsetX + width / 2 - gridSize;
+            } else {
+                objectWidth = gridSize;
+                objectX = ((x - y) / 2) * gridSize + offsetX + width / 2 - halfGridSize;
+            }
+            if (imageHeight > 1) {
+                objectHeight = (imageHeight - 0.253) * gridSize;
+            } else {
+                objectHeight = gridSize;
+            }
+            const objectY = ((x + y) / 2) * gridSize / 2 + offsetY + height / 4 - halfGridSize;
+            ctx.drawImage(image, objectX, objectY, objectWidth, objectHeight);
         }
 
         cubeImage.onload = () => {
+            draw();
+        };
+
+        ambarImage.onload = () => {
             draw();
         };
 
@@ -133,13 +177,43 @@
             }
         }
 
+        let gameObjects = [];
+
+        async function fetchGameObjects() {
+            try {
+                const response = await fetch('/api/objects');
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                const json = await response.json();
+                gameObjects = json.data;
+            } catch (error) {
+                console.error('Failed to fetch game objects:', error);
+                gameObjects = [
+                    { type: 'cube', x: 3, y: 4, metadata: { width: 1, height: 1 } },
+                    { type: 'cube', x: 3, y: 5, metadata: { width: 1, height: 1 } },
+                    { type: 'ambar', x: 10, y: 10, metadata: { width: 3, height: 2 } }
+                ];
+            }
+            draw();
+        }
+
         function draw() {
             ctx.clearRect(0, 0, width, height);
             drawBackground();
             drawIsometricGrid();
-            drawCube(3, 5);
-            drawCube(4, 5);
+            gameObjects.sort((a, b) => a.x - b.x || a.y - b.y); // Сортировка объектов по x, затем по y
+            gameObjects.forEach(obj => {
+                const { type, x, y, metadata } = obj;
+                if (type === 'cube') {
+                    drawCubeObject(cubeImage, x, y, metadata.width, metadata.height);
+                } else if (type === 'ambar') {
+                    drawCubeObject(ambarImage, x, y, metadata.width, metadata.height);
+                }
+            });
         }
+
+        fetchGameObjects();
 
         canvas.addEventListener('mousedown', (e) => {
             isDragging = true;
@@ -238,6 +312,55 @@
             }
         });
 
+        canvas.addEventListener('click', (e) => {
+            const mouseX = e.clientX - canvas.offsetLeft;
+            const mouseY = e.clientY - canvas.offsetTop;
+
+            const worldX = (mouseX - offsetX - width / 2) / scale;
+            const worldY = (mouseY - offsetY - height / 4) / scale;
+
+            gameObjects.sort((a, b) => b.y - a.y || b.x - a.x); // Сортировка объектов по x, затем по y
+            for (const obj of gameObjects) {
+                const { x, y, metadata } = obj;
+                const gridSize = 50 * scale;
+                const halfGridSize = gridSize / 2;
+
+                const objectX = ((x - y) / 2) * gridSize + offsetX + width / 2 - (metadata.width > 1 ? gridSize : halfGridSize);
+                const objectY = ((x + y) / 2) * gridSize / 2 + offsetY + height / 4 - halfGridSize;
+                const objectWidth = (metadata.width > 1 ? (metadata.width - 0.5) * gridSize : gridSize);
+                const objectHeight = (metadata.height > 1 ? (metadata.height - 0.253) * gridSize : gridSize);
+
+                if (
+                    mouseX >= objectX &&
+                    mouseX <= objectX + objectWidth &&
+                    mouseY >= objectY &&
+                    mouseY <= objectY + objectHeight
+                ) {
+                    showModal(obj);
+                    break;
+                }
+            }
+        });
+
+        function showModal(obj) {
+            const modal = document.getElementById('modal');
+            const modalContent = document.getElementById('modal-content');
+
+            modalContent.innerHTML = `
+                <h3>Информация об объекте</h3>
+                <p>Тип: ${obj.type}</p>
+                <p>Координаты: (${obj.x}, ${obj.y})</p>
+                <p>Размеры: ${obj.metadata.width}x${obj.metadata.height}</p>
+                <button id="closeModal">Закрыть</button>
+            `;
+
+            modal.style.display = 'block';
+
+            document.getElementById('closeModal').addEventListener('click', () => {
+                modal.style.display = 'none';
+            });
+        }
+
         window.addEventListener('resize', () => {
             width = window.innerWidth;
             height = window.innerHeight;
@@ -262,6 +385,9 @@
         <button onclick="alert('Режим редактирования')">🔨</button>
         <button onclick="alert('Инвентарь')">📦</button>
         <button onclick="alert('Магазин')">💲</button>
+    </div>
+    <div id="modal">
+        <div id="modal-content"></div>
     </div>
 </body>
 </html>
